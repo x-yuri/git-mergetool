@@ -28,55 +28,18 @@ git_status() {
     git diff
 }
 
-unrand_filenames() {
-    sed -E 's#(/tmp/[^ ]+\.(LOCAL|BASE|REMOTE))[^ ]+#\1#g'
-}
-
-vimdiff_cmd() {
-    local r=(
-        e "/tmp/$1"
-    )
-    if [ "$2" ]; then
-        r+=(
-            \| vertical rightbelow diffsplit "/tmp/$2"
-        )
-    fi
-    shift 2
-    if [ ${#@} = 3 ]; then
-        r+=(
-            \| tabnew
-            \| e "/tmp/$1"
-        )
-        if [ "$2" ]; then
-            r+=(
-                \| vertical rightbelow diffsplit "/tmp/$2"
-            )
-        fi
-        shift 2
-    fi
-    r+=(
-        \| tabnew
-        \| e "$1"
-        \| tabnext
-    )
-    echo "+${r[*]}"
-}
-
-cat_files_oneliner() {
+output_both() {
     echo "$(one_line '
-        echo "$*"
-        | sed "s/ | /\n/g"
-        | sed -E "
-            /.*(e|split|tabnew) ([^ ]+)/!d
-            ; /.*(e|split|tabnew) ([^ ]+)/   s/.*(e|split|tabnew) ([^ ]+)/\2/"
-        | while IFS= read -r; do
-            cat "$REPLY"
-        ; done
+        cmd=$1;
+        echo "$cmd"
+            | sed -E "s/^\+//; s/\|/\n/g"
+            | egrep -v "^\s*(tabnew|tabnext)\s*$"
+            | awk "{print \$NF}"
+            | while IFS= read -r f; do
+                echo "$(basename -- "$f" | sed -E "s/(\\.(LOCAL|BASE|REMOTE)).*/\\1/"):";
+                cat "$f" | sed -E "s/^/    /";
+            done
     ')"
-}
-
-output_args_oneliner() {
-    echo 'for a; do echo "$a"; done'
 }
 
 mk_script() {
@@ -92,8 +55,12 @@ sed -Ei -e '/pick.*/!d' -e 'N; s/(.*)\n(.*)/\2\n\1/' "$1"
 SCRIPT
 )
 
+strip_commit_hash() {
+    sed -E 's/(>>>>>>>) [0-9a-f]+/\1/'
+}
+
 @test "both modified" {
-    stub vimdiff 'for a; do echo "$a"; done'
+    stub vimdiff "$(output_both)"
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
@@ -106,13 +73,29 @@ SCRIPT
     run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
-    output=$(echo "$output" | unrand_filenames)
-    files=(1.LOCAL 1.BASE 1.BASE 1.REMOTE 1)
-    [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
+    expected_output=$(cat <<OUTPUT
+1.LOCAL:
+    1d
+1.BASE:
+    1
+1.BASE:
+    1
+1.REMOTE:
+    1m
+1:
+    <<<<<<< HEAD
+    1d
+    =======
+    1m
+    >>>>>>> (m2)
+OUTPUT
+)
+    output=`echo "$output" | strip_commit_hash`
+    [ "$output" == "$expected_output" ]
 }
 
 @test "deleted by us" {
-    stub vimdiff 'for a; do echo "$a"; done'
+    stub vimdiff "$(output_both)"
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
@@ -125,13 +108,20 @@ SCRIPT
     run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
-    output=$(echo "$output" | unrand_filenames)
-    files=(1.BASE 1.REMOTE 1)
-    [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
+    expected_output=$(cat <<OUTPUT
+1.BASE:
+    1
+1.REMOTE:
+    1m
+1:
+    1m
+OUTPUT
+)
+    [ "$output" == "$expected_output" ]
 }
 
 @test "deleted by them" {
-    stub vimdiff 'for a; do echo "$a"; done'
+    stub vimdiff "$(output_both)"
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
@@ -144,13 +134,20 @@ SCRIPT
     run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
-    output=$(echo "$output" | unrand_filenames)
-    files=(1.LOCAL 1.BASE 1)
-    [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
+    expected_output=$(cat <<OUTPUT
+1.LOCAL:
+    1d
+1.BASE:
+    1
+1:
+    1d
+OUTPUT
+)
+    [ "$output" == "$expected_output" ]
 }
 
 @test "both added" {
-    stub vimdiff 'for a; do echo "$a"; done'
+    stub vimdiff "$(output_both)"
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
@@ -163,39 +160,53 @@ SCRIPT
     run "$DIR/bin/git-rebasediff.sh" 2
 
     [ "$status" = 0 ]
-    output=$(echo "$output" | unrand_filenames)
-    files=(2.LOCAL '' 2.REMOTE '' 2)
-    [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
+    output=`echo "$output" | strip_commit_hash`
+    expected_output=$(cat <<OUTPUT
+2.LOCAL:
+    2d
+2.REMOTE:
+    2m
+2:
+    <<<<<<< HEAD
+    2d
+    =======
+    2m
+    >>>>>>> (m2)
+OUTPUT
+)
+    [ "$output" == "$expected_output" ]
 }
 
-set_up_merge_conflict() {
+@test "swap commits" {
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     echo 2 > 1; git_commit c2 1
     echo 3 > 1; git_commit c3 1
     EDITOR="$swap_lines" git rebase -i HEAD~2 || true
-}
-
-@test "swap commits: filenames" {
-    set_up_merge_conflict
-    stub vimdiff "$(output_args_oneliner)"
+    stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
-    output=$(echo "$output" | unrand_filenames)
-    files=(1.LOCAL 1.BASE 1.BASE 1.REMOTE 1)
-    [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
-}
-
-@test "swap commits: file content" {
-    set_up_merge_conflict
-    stub vimdiff "$(cat_files_oneliner)"
-
-    run "$DIR/bin/git-rebasediff.sh" 1
-
-    [ "$status" = 0 ]
-    [ "$output" = 1$'\n'2$'\n'2$'\n'3$'\n'"$(cat 1)" ]
+    output=`echo "$output" | strip_commit_hash`
+    expected_output=$(cat <<OUTPUT
+1.LOCAL:
+    1
+1.BASE:
+    2
+1.BASE:
+    2
+1.REMOTE:
+    3
+1:
+    <<<<<<< HEAD
+    1
+    =======
+    3
+    >>>>>>> (c3)
+OUTPUT
+)
+    [ "$output" == "$expected_output" ]
 }
 
 @test "no filename passed" {
