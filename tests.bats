@@ -61,8 +61,7 @@ strip_commit_hash() {
 
 @test "both modified" {
     stub vimdiff "$(output_both)"
-    tmp=`mktemp -d`; cd "$tmp"
-    git init
+    set_up_git_repo
     echo 1 > 1; git_commit m1 1
     git checkout -b devel
     echo 1d > 1; git_commit d2 1
@@ -96,8 +95,7 @@ OUTPUT
 
 @test "deleted by us" {
     stub vimdiff "$(output_both)"
-    tmp=`mktemp -d`; cd "$tmp"
-    git init
+    set_up_git_repo
     echo 1 > 1; git_commit m1 1
     git checkout -b devel
     git_delete 'd2' 1
@@ -122,8 +120,7 @@ OUTPUT
 
 @test "deleted by them" {
     stub vimdiff "$(output_both)"
-    tmp=`mktemp -d`; cd "$tmp"
-    git init
+    set_up_git_repo
     echo 1 > 1; git_commit m1 1
     git checkout -b devel
     echo 1d > 1; git_commit d2 1
@@ -148,8 +145,7 @@ OUTPUT
 
 @test "both added" {
     stub vimdiff "$(output_both)"
-    tmp=`mktemp -d`; cd "$tmp"
-    git init
+    set_up_git_repo
     echo 1 > 1; git_commit m1 1
     git checkout -b devel
     echo 2d > 2; git_commit d2 2
