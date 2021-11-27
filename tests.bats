@@ -78,7 +78,6 @@ to_tty() {
 }
 
 @test "both modified" {
-    stub vimdiff "$(output_both)"
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     git checkout -b devel
@@ -86,6 +85,7 @@ to_tty() {
     git checkout master
     echo 1m > 1; git_commit m2 1
     git rebase devel || true
+    stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 1
 
@@ -112,7 +112,6 @@ OUTPUT
 }
 
 @test "deleted by us" {
-    stub vimdiff "$(output_both)"
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     git checkout -b devel
@@ -120,6 +119,7 @@ OUTPUT
     git checkout master
     echo 1m > 1; git_commit m2 1
     git rebase devel || true
+    stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 1
 
@@ -137,7 +137,6 @@ OUTPUT
 }
 
 @test "deleted by them" {
-    stub vimdiff "$(output_both)"
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     git checkout -b devel
@@ -145,6 +144,7 @@ OUTPUT
     git checkout master
     git_delete m2 1
     git rebase devel || true
+    stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 1
 
@@ -162,7 +162,6 @@ OUTPUT
 }
 
 @test "both added" {
-    stub vimdiff "$(output_both)"
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     git checkout -b devel
@@ -170,6 +169,7 @@ OUTPUT
     git checkout master
     echo 2m > 2; git_commit m2 2
     git rebase devel || true
+    stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 2
 
