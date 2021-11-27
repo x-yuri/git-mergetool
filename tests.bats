@@ -176,7 +176,7 @@ set_up_merge_conflict() {
     EDITOR="$swap_lines" git rebase -i HEAD~2 || true
 }
 
-@test "merge conflict: filenames" {
+@test "swap commits: filenames" {
     set_up_merge_conflict
     stub vimdiff "$(output_args_oneliner)"
 
@@ -188,7 +188,7 @@ set_up_merge_conflict() {
     [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
 }
 
-@test "merge conflict: file content" {
+@test "swap commits: file content" {
     set_up_merge_conflict
     stub vimdiff "$(cat_files_oneliner)"
 
