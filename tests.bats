@@ -98,7 +98,7 @@ OUTPUT
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     git checkout -b devel
-    git_delete 'd2' 1
+    git_delete d2 1
     git checkout master
     echo 1m > 1; git_commit m2 1
     git rebase devel || true
@@ -125,7 +125,7 @@ OUTPUT
     git checkout -b devel
     echo 1d > 1; git_commit d2 1
     git checkout master
-    git_delete 'm2' 1
+    git_delete m2 1
     git rebase devel || true
 
     run "$DIR/bin/git-rebasediff.sh" 1
