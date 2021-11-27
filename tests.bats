@@ -88,7 +88,7 @@ mk_script() {
 
 SWAP_TWO_PICK_LINES=$(mk_script <<\SCRIPT
 #!/usr/bin/env bash
-sed -Ei -e '/pick.*/!d' -e '2 { N; s/(.*)\n(.*)/\2\n\1/ }' "$1"
+sed -Ei -e '/pick.*/!d' -e 'N; s/(.*)\n(.*)/\2\n\1/' "$1"
 SCRIPT
 )
 
@@ -171,21 +171,20 @@ SCRIPT
 set_up_merge_conflict() {
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
-    echo 2 > 2; git_commit c2 2
-    echo 3 > 2; git_commit c3 2
-    echo 4 > 2; git_commit c4 2
-    EDITOR="$SWAP_TWO_PICK_LINES" git rebase -i HEAD~3 || true
+    echo 2 > 1; git_commit c2 1
+    echo 3 > 1; git_commit c3 1
+    EDITOR="$SWAP_TWO_PICK_LINES" git rebase -i HEAD~2 || true
 }
 
 @test "merge conflict: filenames" {
     set_up_merge_conflict
     stub vimdiff "$(output_args_oneliner)"
 
-    run "$DIR/bin/git-rebasediff.sh" 2
+    run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
     output=$(echo "$output" | unrand_filenames)
-    files=(2.LOCAL 2.BASE 2.BASE 2.REMOTE 2)
+    files=(1.LOCAL 1.BASE 1.BASE 1.REMOTE 1)
     [ "$output" == "$(vimdiff_cmd "${files[@]}")" ]
 }
 
@@ -193,10 +192,10 @@ set_up_merge_conflict() {
     set_up_merge_conflict
     stub vimdiff "$(cat_files_oneliner)"
 
-    run "$DIR/bin/git-rebasediff.sh" 2
+    run "$DIR/bin/git-rebasediff.sh" 1
 
     [ "$status" = 0 ]
-    [ "$output" = 2$'\n'3$'\n'3$'\n'4$'\n'"$(cat 2)" ]
+    [ "$output" = 1$'\n'2$'\n'2$'\n'3$'\n'"$(cat 1)" ]
 }
 
 @test "no filename passed" {
