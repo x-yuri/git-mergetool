@@ -3,12 +3,16 @@ DIR=`readlink -f .`
 
 load bats-mock/stub
 
+to_delete=()
+
 one_line() {
     echo "$1" | tr $'\n' ' '
 }
 
 set_up_git_repo() {
+    local tmp
     tmp=`mktemp -d`; cd "$tmp"
+    to_delete+=("$tmp")
     git init
 }
 
@@ -43,25 +47,31 @@ output_both() {
 }
 
 mk_script() {
+    local tmp_script
     tmp_script=`mktemp`
     cat > "$tmp_script"
     chmod u+x "$tmp_script"
     echo "$tmp_script"
 }
 
-swap_lines=$(mk_script <<\SCRIPT
+mk_swap_lines_script() {
+    swap_lines_script=$(mk_script <<\SCRIPT
 #!/usr/bin/env bash
 sed -Ei -e '/pick.*/!d' -e 'N; s/(.*)\n(.*)/\2\n\1/' "$1"
 SCRIPT
 )
+    to_delete+=("$swap_lines_script")
+}
 
-edit_commit() {
+mk_edit_commit_script() {
     local n=$1
-    mk_script <<SCRIPT
+    edit_commit_script=$(mk_script <<SCRIPT
 #!/usr/bin/env bash
 n=$n
 sed -Ei -e '/pick.*/!d' -e $n' s/pick/edit/' "\$1"
 SCRIPT
+)
+    to_delete+=("$edit_commit_script")
 }
 
 strip_commit_hash() {
@@ -192,11 +202,12 @@ OUTPUT
 }
 
 @test "swap commits" {
+    mk_swap_lines_script
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     echo 2 > 1; git_commit c2 1
     echo 3 > 1; git_commit c3 1
-    EDITOR="$swap_lines" git rebase -i HEAD~2 || true
+    EDITOR="$swap_lines_script" git rebase -i HEAD~2 || true
     stub vimdiff "$(output_both)"
 
     run "$DIR/bin/git-rebasediff.sh" 1
@@ -224,10 +235,11 @@ OUTPUT
 }
 
 @test "file didn't exist" {
+    mk_edit_commit_script 1
     set_up_git_repo
     echo 1 > 1; git_commit c1 1
     echo 2 > 2; git_commit c2 2
-    EDITOR="$(edit_commit 1)" git rebase -i --root || true
+    EDITOR="$edit_commit_script" git rebase -i --root || true
     echo 22 > 2; git_commit c22 2
     git rebase --continue || true
     stub vimdiff "$(output_both)"
@@ -262,6 +274,8 @@ OUTPUT
 
 teardown() {
     unstub vimdiff
-    [ "${tmp:-}" ] && rm -rf "$tmp" || true
-    [ "${tmp_script:-}" ] && rm -rf "$tmp_script" || true
+    for e in "${to_delete[@]}"; do
+        rm -rf "$e"
+    done
+    to_delete=()
 }
