@@ -55,6 +55,15 @@ sed -Ei -e '/pick.*/!d' -e 'N; s/(.*)\n(.*)/\2\n\1/' "$1"
 SCRIPT
 )
 
+edit_commit() {
+    local n=$1
+    mk_script <<SCRIPT
+#!/usr/bin/env bash
+n=$n
+sed -Ei -e '/pick.*/!d' -e $n' s/pick/edit/' "\$1"
+SCRIPT
+}
+
 strip_commit_hash() {
     sed -E 's/(>>>>>>>) [0-9a-f]+/\1/'
 }
@@ -200,6 +209,35 @@ OUTPUT
     =======
     3
     >>>>>>> (c3)
+OUTPUT
+)
+    [ "$output" == "$expected_output" ]
+}
+
+@test "file didn't exist" {
+    set_up_git_repo
+    echo 1 > 1; git_commit c1 1
+    echo 2 > 2; git_commit c2 2
+    EDITOR="$(edit_commit 1)" git rebase -i --root || true
+    echo 22 > 2; git_commit c22 2
+    git rebase --continue || true
+    stub vimdiff "$(output_both)"
+
+    run "$DIR/bin/git-rebasediff.sh" 2
+
+    [ "$status" = 0 ]
+    output=`echo "$output" | strip_commit_hash`
+    expected_output=$(cat <<OUTPUT
+2.LOCAL:
+    22
+2.REMOTE:
+    2
+2:
+    <<<<<<< HEAD
+    22
+    =======
+    2
+    >>>>>>> (c2)
 OUTPUT
 )
     [ "$output" == "$expected_output" ]
