@@ -86,7 +86,7 @@ mk_script() {
     echo "$tmp_script"
 }
 
-SWAP_TWO_PICK_LINES=$(mk_script <<\SCRIPT
+swap_lines=$(mk_script <<\SCRIPT
 #!/usr/bin/env bash
 sed -Ei -e '/pick.*/!d' -e 'N; s/(.*)\n(.*)/\2\n\1/' "$1"
 SCRIPT
@@ -173,7 +173,7 @@ set_up_merge_conflict() {
     echo 1 > 1; git_commit c1 1
     echo 2 > 1; git_commit c2 1
     echo 3 > 1; git_commit c3 1
-    EDITOR="$SWAP_TWO_PICK_LINES" git rebase -i HEAD~2 || true
+    EDITOR="$swap_lines" git rebase -i HEAD~2 || true
 }
 
 @test "merge conflict: filenames" {
