@@ -68,6 +68,15 @@ strip_commit_hash() {
     sed -E 's/(>>>>>>>) [0-9a-f]+/\1/'
 }
 
+to_tty() {
+    {
+        echo
+        echo {{{
+        cat
+        echo }}}
+    } > /dev/tty
+}
+
 @test "both modified" {
     stub vimdiff "$(output_both)"
     set_up_git_repo
