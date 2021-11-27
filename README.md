@@ -1,1 +1,8 @@
-Needs bats and bats-mock-1.0.1 (55fe1b0) to run tests.
+## Running tests
+
+```
+$ git clone https://github.com/sstephenson/bats
+$ git clone https://github.com/jasonkarns/bats-mock
+$ cd bats-mock && git checkout 55fe1b0
+$ bats/bin/bats tests.bats
+```
