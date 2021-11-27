@@ -97,9 +97,9 @@ SCRIPT
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
-    git co -b devel
+    git checkout -b devel
     echo 1d > 1; git_commit d2 1
-    git co master
+    git checkout master
     echo 1m > 1; git_commit m2 1
     git rebase devel || true
 
@@ -116,9 +116,9 @@ SCRIPT
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
-    git co -b devel
+    git checkout -b devel
     git_delete 'd2' 1
-    git co master
+    git checkout master
     echo 1m > 1; git_commit m2 1
     git rebase devel || true
 
@@ -135,9 +135,9 @@ SCRIPT
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
-    git co -b devel
+    git checkout -b devel
     echo 1d > 1; git_commit d2 1
-    git co master
+    git checkout master
     git_delete 'm2' 1
     git rebase devel || true
 
@@ -154,9 +154,9 @@ SCRIPT
     tmp=`mktemp -d`; cd "$tmp"
     git init
     echo 1 > 1; git_commit m1 1
-    git co -b devel
+    git checkout -b devel
     echo 2d > 2; git_commit d2 2
-    git co master
+    git checkout master
     echo 2m > 2; git_commit m2 2
     git rebase devel || true
 
